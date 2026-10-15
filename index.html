@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AirGap Drop - النقل الشبح</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0a0a16;--v:#7c3aed;--g:#10b981;--tx:#e8e8f5;--mu:#9a9ab8;--gl:rgba(255,255,255,.06);--bd:rgba(255,255,255,.12);--er:#f87171;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);background-image:radial-gradient(circle at 15% 0,rgba(124,58,237,.28),transparent 45%),radial-gradient(circle at 90% 100%,rgba(16,185,129,.2),transparent 45%);background-attachment:fixed;color:var(--tx);font-family:'Cairo','Tajawal',system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:760px;margin:0 auto;padding:18px 14px 40px}
+h1{margin:6px 0 2px;font-size:1.9rem;font-weight:800;background:linear-gradient(90deg,var(--v),var(--g));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mu);margin:0 0 16px;font-size:.95rem}
+.glass{background:var(--gl);border:1px solid var(--bd);border-radius:16px;padding:16px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);margin-bottom:14px}
+.tabs{display:flex;gap:6px;padding:5px;border-radius:14px;background:var(--gl);border:1px solid var(--bd);margin-bottom:14px}
+.tab,.seg button{flex:1;font:inherit;font-weight:600;color:var(--mu);background:transparent;border:0;border-radius:10px;padding:10px 8px;cursor:pointer}
+.tab.on{background:linear-gradient(135deg,var(--v),#5b21b6);color:#fff;box-shadow:0 0 18px rgba(124,58,237,.55)}
+.seg{display:flex;gap:6px;margin-bottom:12px}
+.seg button{border:1px solid var(--bd)}
+.seg button.on{border-color:var(--g);color:var(--g);background:rgba(16,185,129,.1)}
+textarea{width:100%;min-height:130px;resize:vertical;font:inherit;color:var(--tx);background:rgba(0,0,0,.35);border:1px solid var(--bd);border-radius:12px;padding:12px}
+textarea:focus,button:focus-visible,input:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.mu{color:var(--mu);font-size:.85rem}
+.btn{font:inherit;font-weight:700;color:#fff;border:0;border-radius:12px;padding:11px 20px;cursor:pointer;background:linear-gradient(135deg,var(--v),#5b21b6)}
+.btn.g{background:linear-gradient(135deg,var(--g),#047857)}
+.btn.o{background:transparent;border:1px solid var(--bd);color:var(--tx)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.file{color:var(--mu);font-size:.85rem}
+.hide{display:none!important}
+#qrBox{display:flex;justify-content:center;padding:14px;background:#fff;border-radius:14px;width:fit-content;margin:12px auto;max-width:100%}
+#qrBox img,#qrBox canvas{max-width:100%;height:auto}
+canvas.viz{width:100%;height:130px;background:rgba(0,0,0,.4);border-radius:12px;display:block}
+input[type=range]{accent-color:var(--g);flex:1;min-width:120px}
+.bar{height:10px;border-radius:8px;background:rgba(255,255,255,.1);overflow:hidden;margin:10px 0}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--v),var(--g));transition:width .2s}
+.cells{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.cells b{width:18px;height:18px;border-radius:4px;background:rgba(255,255,255,.1);border:1px solid var(--bd)}
+.cells b.ok{background:var(--g);border-color:var(--g);box-shadow:0 0 8px rgba(16,185,129,.7)}
+#reader{width:100%;max-width:420px;margin:10px auto;border-radius:14px;overflow:hidden}
+.out{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.4);border:1px solid var(--g);border-radius:12px;padding:12px;margin:10px 0;direction:auto}
+.err{color:var(--er);font-size:.9rem;margin:8px 0}
+.live{font-family:ui-monospace,monospace;direction:ltr;text-align:left;word-break:break-all;min-height:48px;background:rgba(0,0,0,.4);border-radius:10px;padding:10px;color:var(--g)}
+.out img{max-width:100%;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>AirGap Drop - النقل الشبح</h1>
+<p class="sub">انقل نصاً أو ملفاً صغيراً بين جهازين بالضوء أو الصوت، بدون إنترنت أو بلوتوث بعد فتح الصفحة.</p>
+
+<div class="tabs" role="tablist">
+<button class="tab on" id="tabS" role="tab">إرسال بيانات ( المرسل )</button>
+<button class="tab" id="tabR" role="tab">استقبال بيانات ( المستلم )</button>
+</div>
+
+<section id="send">
+<div class="glass">
+<textarea id="txt" placeholder="اكتب النص السري هنا..."></textarea>
+<div class="row"><label class="btn o" for="fileIn">اختيار ملف نصي أو صورة صغيرة</label>
+<input id="fileIn" type="file" accept="text/*,image/*" class="hide"><span class="file" id="fileName">لم يُختر ملف</span></div>
+<div class="mu" id="stats">0 حرف · 0 بايت</div>
+<div class="err" id="sErr"></div>
+</div>
+<div class="glass">
+<div class="seg"><button id="mQR" class="on">البث الضوئي (QR متحرك)</button><button id="mAU">البث الصوتي (موجات صوتية)</button></div>
+<div id="qrPane">
+<div class="row"><span>السرعة</span><input type="range" id="fps" min="2" max="10" value="4"><b id="fpsV">4 إطار/ث</b></div>
+<div id="qrBox"></div>
+<div class="mu" id="qrInfo" style="text-align:center"></div>
+</div>
+<div id="auPane" class="hide">
+<canvas class="viz" id="viz"></canvas>
+<div class="mu" id="auInfo" style="margin-top:8px">رفع صوت الجهاز وتقريبه من ميكروفون المستلم يحسّن الدقة. كل حرف يستغرق ~0.14 ثانية.</div>
+</div>
+<div class="row"><button class="btn g" id="go">ابدأ البث</button><button class="btn o" id="stop" disabled>إيقاف</button></div>
+</div>
+</section>
+
+<section id="recv" class="hide">
+<div class="glass">
+<div class="seg"><button id="rQR" class="on">استقبال ضوئي (كاميرا)</button><button id="rAU">استقبال صوتي (ميكروفون)</button></div>
+<div id="rQrPane">
+<div id="reader"></div>
+<div class="bar"><i id="pb"></i></div>
+<div class="mu" id="pt">لم يتم التقاط أي جزء بعد</div>
+<div class="cells" id="cells"></div>
+</div>
+<div id="rAuPane" class="hide">
+<canvas class="viz" id="rviz"></canvas>
+<div class="mu" style="margin:8px 0">الحروف الملتقطة:</div>
+<div class="live" id="live"></div>
+<div class="mu" id="aState">بانتظار نغمة البداية...</div>
+</div>
+<div class="err" id="rErr"></div>
+<div class="row"><button class="btn g" id="rGo">ابدأ الاستقبال</button><button class="btn o" id="rStop" disabled>إيقاف</button><button class="btn o" id="rReset">مسح</button></div>
+</div>
+<div class="glass hide" id="result">
+<b>تم الاستقبال بنجاح</b>
+<div class="out" id="outBox"></div>
+<div class="row"><button class="btn" id="copy">نسخ الرسالة</button><span class="mu" id="copyOk"></span></div>
+</div>
+</section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)};
+var ALPHA="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+var F0=2000,FSTEP=40,F_START=1500,F_END=1700,TONE=0.10,GAP=0.04;
+var MAX_FILE=30*1024;
+
+function u8ToB64(u8){var s="";for(var i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)}
+function strToB64(s){return u8ToB64(new TextEncoder().encode(s))}
+function b64ToStr(b){var bin=atob(b),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
+
+/* ---------- tabs ---------- */
+function showTab(s){$("send").classList.toggle("hide",!s);$("recv").classList.toggle("hide",s);$("tabS").classList.toggle("on",s);$("tabR").classList.toggle("on",!s);if(s){stopRecv()}else{stopSend()}}
+$("tabS").onclick=function(){showTab(true)};$("tabR").onclick=function(){showTab(false)};
+
+/* ---------- payload ---------- */
+var fileData=null;
+function payload(){
+ if(fileData)return JSON.stringify({k:"f",n:fileData.name,m:fileData.type,d:fileData.b64});
+ return JSON.stringify({k:"t",d:$("txt").value});
+}
+function updStats(){
+ var t=$("txt").value,b=new TextEncoder().encode(t).length;
+ $("stats").textContent=fileData?("ملف: "+fileData.name+" · "+fileData.size+" بايت"):(t.length+" حرف · "+b+" بايت");
+}
+$("txt").addEventListener("input",function(){fileData=null;$("fileName").textContent="لم يُختر ملف";updStats()});
+$("fileIn").addEventListener("change",function(e){
+ var f=e.target.files[0];$("sErr").textContent="";if(!f)return;
+ if(f.size>MAX_FILE){$("sErr").textContent="الملف أكبر من "+(MAX_FILE/1024)+" كيلوبايت. اختر ملفاً أصغر.";e.target.value="";return}
+ var r=new FileReader();
+ r.onerror=function(){$("sErr").textContent="تعذّرت قراءة الملف."};
+ r.onload=function(){fileData={name:f.name,type:f.type||"application/octet-stream",size:f.size,b64:u8ToB64(new Uint8Array(r.result))};$("fileName").textContent=f.name;$("txt").value="";updStats()};
+ r.readAsArrayBuffer(f);
+});
+
+/* ---------- sender mode ---------- */
+var sMode="qr";
+$("mQR").onclick=function(){setS("qr")};$("mAU").onclick=function(){setS("au")};
+function setS(m){stopSend();sMode=m;$("mQR").classList.toggle("on",m==="qr");$("mAU").classList.toggle("on",m==="au");$("qrPane").classList.toggle("hide",m!=="qr");$("auPane").classList.toggle("hide",m!=="au")}
+$("fps").oninput=function(){$("fpsV").textContent=$("fps").value+" إطار/ث";if(qrTimer){clearInterval(qrTimer);qrTimer=setInterval(nextFrame,1000/+$("fps").value)}};
+
+var qr=null,qrTimer=null,chunks=[],ci=0;
+function nextFrame(){
+ var data=chunks[ci];
+ if(!qr)qr=new QRCode($("qrBox"),{text:data,width:280,height:280,correctLevel:QRCode.CorrectLevel.L});
+ else{qr.clear();qr.makeCode(data)}
+ $("qrInfo").textContent="الجزء "+(ci+1)+" من "+chunks.length;
+ ci=(ci+1)%chunks.length;
+}
+function startQR(){
+ var b64=strToB64(payload()),total=Math.ceil(b64.length/80);chunks=[];
+ for(var i=0;i<total;i++)chunks.push((i+1)+"/"+total+"|"+b64.substr(i*80,80));
+ ci=0;$("qrBox").innerHTML="";qr=null;
+ try{nextFrame()}catch(e){$("sErr").textContent="فشل توليد رمز QR: "+e.message;return false}
+ qrTimer=setInterval(nextFrame,1000/+$("fps").value);return true;
+}
+
+/* audio sender */
+var actx=null,sAn=null,vizRaf=0,auTimer=0;
+function drawViz(cv,an,col){
+ var c=cv.getContext("2d"),w=cv.width=cv.clientWidth*devicePixelRatio,h=cv.height=cv.clientHeight*devicePixelRatio,d=new Uint8Array(an.frequencyBinCount);
+ function f(){
+  an.getByteFrequencyData(d);c.clearRect(0,0,w,h);
+  var n=Math.min(180,d.length),bw=w/n;
+  for(var i=0;i<n;i++){var v=d[i]/255*h;var g=c.createLinearGradient(0,h,0,h-v);g.addColorStop(0,"#7c3aed");g.addColorStop(1,col);c.fillStyle=g;c.fillRect(i*bw,h-v,bw-1,v)}
+  return requestAnimationFrame(f);
+ }
+ var id=0;function loop(){id=f();vizRaf=id}loop();
+}
+function startAudio(){
+ var AC=window.AudioContext||window.webkitAudioContext;
+ if(!AC){$("sErr").textContent="المتصفح لا يدعم Web Audio API.";return false}
+ actx=new AC();if(actx.state==="suspended")actx.resume();
+ var b64=strToB64(payload()),seq=[F_START].concat(b64.split("").map(function(ch){return F0+ALPHA.indexOf(ch)*FSTEP}),[F_END]);
+ var gain=actx.createGain();gain.gain.value=0;sAn=actx.createAnalyser();sAn.fftSize=2048;gain.connect(sAn);sAn.connect(actx.destination);
+ var t=actx.currentTime+0.2;
+ seq.forEach(function(fr){
+  var o=actx.createOscillator();o.type="sine";o.frequency.value=fr;o.connect(gain);
+  gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(0.9,t+0.008);gain.gain.setValueAtTime(0.9,t+TONE-0.008);gain.gain.linearRampToValueAtTime(0,t+TONE);
+  o.start(t);o.stop(t+TONE+0.01);t+=TONE+GAP;
+ });
+ var dur=t-actx.currentTime;
+ drawViz($("viz"),sAn,"#10b981");
+ $("auInfo").textContent="جارٍ البث الصوتي: "+seq.length+" نغمة · المدة ~"+Math.ceil(dur)+" ثانية";
+ auTimer=setTimeout(function(){stopSend();$("auInfo").textContent="انتهى البث الصوتي. يمكنك إعادته."},dur*1000+300);
+ return true;
+}
+function stopSend(){
+ if(qrTimer){clearInterval(qrTimer);qrTimer=null}
+ clearTimeout(auTimer);cancelAnimationFrame(vizRaf);
+ if(actx){try{actx.close()}catch(e){}actx=null}
+ $("go").disabled=false;$("stop").disabled=true;
+}
+$("go").onclick=function(){
+ $("sErr").textContent="";stopSend();
+ if(!fileData&&!$("txt").value.trim()){$("sErr").textContent="أدخل نصاً أو اختر ملفاً أولاً.";return}
+ var ok=sMode==="qr"?startQR():startAudio();
+ if(ok){$("go").disabled=true;$("stop").disabled=false}
+};
+$("stop").onclick=stopSend;
+updStats();
+
+/* ---------- receiver ---------- */
+var rMode="qr";
+$("rQR").onclick=function(){setR("qr")};$("rAU").onclick=function(){setR("au")};
+function setR(m){stopRecv();rMode=m;$("rQR").classList.toggle("on",m==="qr");$("rAU").classList.toggle("on",m==="au");$("rQrPane").classList.toggle("hide",m!=="qr");$("rAuPane").classList.toggle("hide",m!=="au")}
+
+var scanner=null,got={},total=0;
+function resetRecv(){got={};total=0;$("pb").style.width="0";$("pt").textContent="لم يتم التقاط أي جزء بعد";$("cells").innerHTML="";$("live").textContent="";$("aState").textContent="بانتظار نغمة البداية...";$("result").classList.add("hide");$("rErr").textContent=""}
+function renderCells(){
+ var n=Object.keys(got).length;
+ $("pb").style.width=(total?n/total*100:0)+"%";
+ $("pt").textContent="تم التقاط "+n+" من "+total+" أجزاء";
+ var h="";for(var i=1;i<=total;i++)h+="<b class='"+(got[i]?"ok":"")+"'></b>";$("cells").innerHTML=h;
+}
+function onScan(text){
+ var m=/^(\d+)\/(\d+)\|(.*)$/.exec(text);if(!m)return;
+ var i=+m[1],t=+m[2];
+ if(t!==total){got={};total=t}
+ if(!got[i]){got[i]=m[3];renderCells();if(Object.keys(got).length===total)finish(Array.apply(null,{length:total}).map(function(_,k){return got[k+1]}).join(""))}
+}
+function showResult(obj){
+ var box=$("outBox");box.innerHTML="";
+ if(obj.k==="f"){
+  var bin=atob(obj.d),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  var blob=new Blob([u],{type:obj.m}),url=URL.createObjectURL(blob);
+  var cap=document.createElement("div");cap.textContent="ملف: "+obj.n;box.appendChild(cap);
+  if(/^image\//.test(obj.m)){var im=document.createElement("img");im.src=url;box.appendChild(im)}
+  else if(/^text\//.test(obj.m)){var p=document.createElement("div");p.textContent=new TextDecoder().decode(u);box.appendChild(p);box.dataset.copy=p.textContent}
+  var a=document.createElement("a");a.href=url;a.download=obj.n;a.textContent="تنزيل الملف";a.style.color="#10b981";box.appendChild(document.createElement("br"));box.appendChild(a);
+  if(!box.dataset.copy)box.dataset.copy=obj.n;
+ }else{box.textContent=obj.d;box.dataset.copy=obj.d}
+ $("result").classList.remove("hide");
+}
+function finish(b64){
+ try{showResult(JSON.parse(b64ToStr(b64)));stopRecv()}
+ catch(e){$("rErr").textContent="فشل فك التشفير: البيانات تالفة أو غير مكتملة. اضغط مسح وأعد المحاولة."}
+}
+$("copy").onclick=function(){
+ var t=$("outBox").dataset.copy||$("outBox").textContent;
+ function ok(){$("copyOk").textContent="تم النسخ"}
+ function fb(){var ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");ok()}catch(e){$("copyOk").textContent="تعذّر النسخ"}ta.remove()}
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,fb);else fb();
+};
+
+/* audio receiver */
+var rctx=null,rStream=null,rAn=null,rTimer=0,rViz=0;
+var buf="",inMsg=false,active=false,votes={},peakF=0;
+function startMic(){
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("rErr").textContent="المتصفح لا يدعم الوصول للميكروفون أو الصفحة ليست في سياق آمن (HTTPS).";return}
+ navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}).then(function(s){
+  rStream=s;var AC=window.AudioContext||window.webkitAudioContext;rctx=new AC();if(rctx.state==="suspended")rctx.resume();
+  rAn=rctx.createAnalyser();rAn.fftSize=8192;rAn.smoothingTimeConstant=0;rctx.createMediaStreamSource(s).connect(rAn);
+  drawViz($("rviz"),rAn,"#10b981");
+  buf="";inMsg=false;active=false;votes={};
+  var d=new Uint8Array(rAn.frequencyBinCount),hz=rctx.sampleRate/rAn.fftSize,lo=Math.floor(1300/hz),hi=Math.ceil(4800/hz);
+  rTimer=setInterval(function(){
+   rAn.getByteFrequencyData(d);
+   var mx=0,mi=0;for(var i=lo;i<=hi;i++)if(d[i]>mx){mx=d[i];mi=i}
+   if(mx>120){
+    active=true;var f=mi*hz,key;
+    if(Math.abs(f-F_START)<FSTEP/2+10)key="S";else if(Math.abs(f-F_END)<FSTEP/2+10)key="E";
+    else{var idx=Math.round((f-F0)/FSTEP);key=(idx>=0&&idx<ALPHA.length)?"c"+idx:null}
+    if(key)votes[key]=(votes[key]||0)+1;
+   }else if(active){
+    active=false;var best=null,bc=0;for(var k in votes)if(votes[k]>bc){bc=votes[k];best=k}votes={};
+    if(best&&bc>=3)onSymbol(best);
+   }
+  },10);
+  $("aState").textContent="الميكروفون يعمل. بانتظار نغمة البداية...";
+  $("rGo").disabled=true;$("rStop").disabled=false;
+ }).catch(function(e){
+  $("rErr").textContent=(e&&e.name==="NotAllowedError")?"تم رفض إذن الميكروفون. اسمح به من إعدادات المتصفح ثم أعد المحاولة.":"تعذّر تشغيل الميكروفون: "+(e&&e.message||e);
+ });
+}
+function onSymbol(k){
+ if(k==="S"){buf="";inMsg=true;$("live").textContent="";$("aState").textContent="تم التقاط نغمة البداية، جارٍ الاستقبال...";return}
+ if(!inMsg)return;
+ if(k==="E"){inMsg=false;$("aState").textContent="وصلت نغمة النهاية، جارٍ فك التشفير...";finish(buf);return}
+ buf+=ALPHA[+k.slice(1)];$("live").textContent=buf;
+}
+
+/* camera receiver */
+function startCam(){
+ if(typeof Html5Qrcode==="undefined"){$("rErr").textContent="تعذّر تحميل مكتبة الماسح. تحقق من اتصال الصفحة بالإنترنت ثم أعد التحميل.";return}
+ scanner=new Html5Qrcode("reader");
+ scanner.start({facingMode:"environment"},{fps:20,qrbox:{width:240,height:240}},onScan,function(){}).then(function(){$("rGo").disabled=true;$("rStop").disabled=false}).catch(function(e){
+  scanner=null;var s=String(e);
+  $("rErr").textContent=/Permission|NotAllowed/i.test(s)?"تم رفض إذن الكاميرا. اسمح به من إعدادات المتصفح ثم أعد المحاولة.":/NotFound|Requested device/i.test(s)?"لم يتم العثور على كاميرا في هذا الجهاز.":"تعذّر تشغيل الكاميرا: "+s;
+ });
+}
+function stopRecv(){
+ if(scanner){var s=scanner;scanner=null;s.stop().then(function(){s.clear()}).catch(function(){})}
+ clearInterval(rTimer);cancelAnimationFrame(rViz);cancelAnimationFrame(vizRaf);
+ if(rStream){rStream.getTracks().forEach(function(t){t.stop()});rStream=null}
+ if(rctx){try{rctx.close()}catch(e){}rctx=null}
+ $("rGo").disabled=false;$("rStop").disabled=true;
+}
+$("rGo").onclick=function(){$("rErr").textContent="";if(rMode==="qr")startCam();else startMic()};
+$("rStop").onclick=stopRecv;
+$("rReset").onclick=function(){stopRecv();resetRecv()};
+window.addEventListener("pagehide",function(){stopSend();stopRecv()});
+})();
+</script>
+</body>
+</html>
