@@ -70,6 +70,8 @@ input[type=range]{accent-color:var(--g);flex:1;min-width:120px}
 <div class="seg"><button id="mQR" class="on">البث الضوئي (QR متحرك)</button><button id="mAU">البث الصوتي (موجات صوتية)</button></div>
 <div id="qrPane">
 <div class="row"><span>السرعة</span><input type="range" id="fps" min="2" max="10" value="4"><b id="fpsV">4 إطار/ث</b></div>
+<div class="row"><span>حجم الجزء</span><input type="range" id="csz" min="80" max="600" step="20" value="200"><b id="cszV">200 حرف</b></div>
+<div class="mu">الأجزاء الأكبر تنقل أسرع لكنها تحتاج شاشة ساطعة وكاميرا واضحة. قلّل الحجم إن تعذّر المسح.</div>
 <div id="qrBox"></div>
 <div class="mu" id="qrInfo" style="text-align:center"></div>
 </div>
@@ -113,11 +115,25 @@ input[type=range]{accent-color:var(--g);flex:1;min-width:120px}
 var $=function(i){return document.getElementById(i)};
 var ALPHA="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 var F0=2000,FSTEP=40,F_START=1500,F_END=1700,TONE=0.10,GAP=0.04;
-var MAX_FILE=30*1024;
+var MAX_FILE=100*1024;
 
 function u8ToB64(u8){var s="";for(var i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)}
 function strToB64(s){return u8ToB64(new TextEncoder().encode(s))}
 function b64ToStr(b){var bin=atob(b),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
+
+function bytesOf(b64){var bin=atob(b64),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u}
+function pack(str){
+ var u=new TextEncoder().encode(str),raw="r"+u8ToB64(u);
+ if(typeof CompressionStream==="undefined")return Promise.resolve(raw);
+ return new Response(new Blob([u]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer().then(function(ab){var z="z"+u8ToB64(new Uint8Array(ab));return z.length<raw.length?z:raw});
+}
+function unpack(s){
+ var u=bytesOf(s.slice(1));
+ if(s[0]==="r")return Promise.resolve(new TextDecoder().decode(u));
+ if(typeof DecompressionStream==="undefined")return Promise.reject(new Error("no DecompressionStream"));
+ return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+}
+function decFail(){$("rErr").textContent="فشل فك التشفير: البيانات تالفة أو غير مكتملة، أو المتصفح لا يدعم فك الضغط. اضغط مسح وأعد المحاولة."}
 
 /* ---------- tabs ---------- */
 function showTab(s){$("send").classList.toggle("hide",!s);$("recv").classList.toggle("hide",s);$("tabS").classList.toggle("on",s);$("tabR").classList.toggle("on",!s);if(s){stopRecv()}else{stopSend()}}
@@ -147,19 +163,20 @@ $("fileIn").addEventListener("change",function(e){
 var sMode="qr";
 $("mQR").onclick=function(){setS("qr")};$("mAU").onclick=function(){setS("au")};
 function setS(m){stopSend();sMode=m;$("mQR").classList.toggle("on",m==="qr");$("mAU").classList.toggle("on",m==="au");$("qrPane").classList.toggle("hide",m!=="qr");$("auPane").classList.toggle("hide",m!=="au")}
+$("csz").oninput=function(){$("cszV").textContent=$("csz").value+" حرف"};
 $("fps").oninput=function(){$("fpsV").textContent=$("fps").value+" إطار/ث";if(qrTimer){clearInterval(qrTimer);qrTimer=setInterval(nextFrame,1000/+$("fps").value)}};
 
-var qr=null,qrTimer=null,chunks=[],ci=0;
+var qr=null,qrTimer=null,chunks=[],ci=0,qrSize=280;
 function nextFrame(){
  var data=chunks[ci];
- if(!qr)qr=new QRCode($("qrBox"),{text:data,width:280,height:280,correctLevel:QRCode.CorrectLevel.L});
+ if(!qr)qr=new QRCode($("qrBox"),{text:data,width:qrSize,height:qrSize,correctLevel:QRCode.CorrectLevel.L});
  else{qr.clear();qr.makeCode(data)}
  $("qrInfo").textContent="الجزء "+(ci+1)+" من "+chunks.length;
  ci=(ci+1)%chunks.length;
 }
-function startQR(){
- var b64=strToB64(payload()),total=Math.ceil(b64.length/80);chunks=[];
- for(var i=0;i<total;i++)chunks.push((i+1)+"/"+total+"|"+b64.substr(i*80,80));
+function startQR(b64){
+ var sz=+$("csz").value,total=Math.ceil(b64.length/sz);chunks=[];qrSize=sz>240?380:280;
+ for(var i=0;i<total;i++)chunks.push((i+1)+"/"+total+"|"+b64.substr(i*sz,sz));
  ci=0;$("qrBox").innerHTML="";qr=null;
  try{nextFrame()}catch(e){$("sErr").textContent="فشل توليد رمز QR: "+e.message;return false}
  qrTimer=setInterval(nextFrame,1000/+$("fps").value);return true;
@@ -177,11 +194,11 @@ function drawViz(cv,an,col){
  }
  var id=0;function loop(){id=f();vizRaf=id}loop();
 }
-function startAudio(){
+function startAudio(s){
  var AC=window.AudioContext||window.webkitAudioContext;
  if(!AC){$("sErr").textContent="المتصفح لا يدعم Web Audio API.";return false}
  actx=new AC();if(actx.state==="suspended")actx.resume();
- var b64=strToB64(payload()),seq=[F_START].concat(b64.split("").map(function(ch){return F0+ALPHA.indexOf(ch)*FSTEP}),[F_END]);
+ var seq=[F_START].concat(s.split("").map(function(ch){return F0+ALPHA.indexOf(ch)*FSTEP}),[F_END]);
  var gain=actx.createGain();gain.gain.value=0;sAn=actx.createAnalyser();sAn.fftSize=2048;gain.connect(sAn);sAn.connect(actx.destination);
  var t=actx.currentTime+0.2;
  seq.forEach(function(fr){
@@ -204,8 +221,8 @@ function stopSend(){
 $("go").onclick=function(){
  $("sErr").textContent="";stopSend();
  if(!fileData&&!$("txt").value.trim()){$("sErr").textContent="أدخل نصاً أو اختر ملفاً أولاً.";return}
- var ok=sMode==="qr"?startQR():startAudio();
- if(ok){$("go").disabled=true;$("stop").disabled=false}
+ $("go").disabled=true;
+ pack(payload()).then(function(s){var ok=sMode==="qr"?startQR(s):startAudio(s);$("go").disabled=ok;$("stop").disabled=!ok}).catch(function(e){$("go").disabled=false;$("sErr").textContent="تعذّر تجهيز البيانات: "+e.message});
 };
 $("stop").onclick=stopSend;
 updStats();
@@ -243,7 +260,7 @@ function showResult(obj){
  $("result").classList.remove("hide");
 }
 function finish(b64){
- try{showResult(JSON.parse(b64ToStr(b64)));stopRecv()}
+ try{unpack(b64).then(function(t){showResult(JSON.parse(t));stopRecv()}).catch(decFail)}
  catch(e){$("rErr").textContent="فشل فك التشفير: البيانات تالفة أو غير مكتملة. اضغط مسح وأعد المحاولة."}
 }
 $("copy").onclick=function(){
